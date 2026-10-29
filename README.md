@@ -62,10 +62,3 @@ The individual models and ensemble approach are evaluated on a test dataset to c
 
 This project is intended for educational and research purposes only. It is not a clinically validated diagnostic tool.
 
-## Author
-
-**Sanskruti Kamdi**
-
-B.Tech. in Computer Science and Engineering, 2027
-
-GitHub: [YOUR-GITHUB-USERNAME](https://github.com/YOUR-USERNAME)

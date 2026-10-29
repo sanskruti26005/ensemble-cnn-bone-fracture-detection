@@ -1,0 +1,140 @@
+import torch
+import torch.nn as nn
+from torchvision import datasets, transforms, models
+from torch.utils.data import DataLoader
+from PIL import Image, ImageFile
+
+# ---------------------------------------------------------
+# FIX CORRUPTED IMAGES
+# ---------------------------------------------------------
+ImageFile.LOAD_TRUNCATED_IMAGES = True
+
+def safe_loader(path):
+
+    try:
+        return Image.open(path).convert("RGB")
+
+    except:
+
+        print("Skipping Corrupted Image:", path)
+
+        return Image.new("RGB",(128,128))
+
+# ---------------------------------------------------------
+# DEVICE
+# ---------------------------------------------------------
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+print("Using Device:", device)
+
+# =========================================================
+# SAME TRANSFORM AS TRAINING
+# =========================================================
+
+transform = transforms.Compose([
+
+    transforms.Resize((128,128)),
+
+    transforms.ToTensor(),
+
+    transforms.Normalize(
+        [0.5,0.5,0.5],
+        [0.5,0.5,0.5]
+    )
+])
+
+# =========================================================
+# TEST DATASET
+# =========================================================
+
+test_data = datasets.ImageFolder(
+
+r"C:\Users\sansk\Downloads\archive (3)\Bone_Fracture_Binary_Classification\Bone_Fracture_Binary_Classification\test",
+
+transform=transform,
+
+loader=safe_loader
+)
+
+test_loader = DataLoader(
+    test_data,
+    batch_size=16
+)
+
+class_names = test_data.classes
+
+# =========================================================
+# LOAD MODEL
+# =========================================================
+
+model = models.mobilenet_v2(weights=None)
+
+# SAME CLASSIFIER AS TRAINING
+model.classifier = nn.Sequential(
+
+    nn.Dropout(0.3),
+
+    nn.Linear(
+        model.last_channel,
+        2
+    )
+)
+
+# LOAD SAVED WEIGHTS
+model.load_state_dict(
+    torch.load("mobilenet_model.pth")
+)
+
+model = model.to(device)
+
+model.eval()
+
+print("✅ MobileNetV2 Loaded")
+
+# =========================================================
+# TEST ACCURACY
+# =========================================================
+
+correct = 0
+total = 0
+
+with torch.no_grad():
+
+    for images,labels in test_loader:
+
+        images = images.to(device)
+        labels = labels.to(device)
+
+        outputs = model(images)
+
+        _,pred = torch.max(outputs,1)
+
+        total += labels.size(0)
+
+        correct += (pred==labels).sum().item()
+
+acc = 100 * correct / total
+
+print(f"\n✅ Test Accuracy = {acc:.2f}%")
+
+# =========================================================
+# NEW IMAGE PREDICTION
+# =========================================================
+
+# img_path = r"C:\Users\sansk\Desktop\fracture.jpg"
+
+# img = Image.open(img_path).convert("RGB")
+
+# img = transform(img).unsqueeze(0).to(device)
+
+# with torch.no_grad():
+
+#     output = model(img)
+
+#     probs = torch.softmax(output,dim=1)
+
+#     confidence,pred = torch.max(probs,1)
+
+# print("\nPrediction :", class_names[pred.item()])
+
+# print("Confidence :", confidence.item()*100)
